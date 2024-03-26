@@ -1,0 +1,51 @@
+* {
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: sans-serif;
+    font-size: 20px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  
+  a,
+  a:visited {
+    color: #007bff;
+  }
+  
+  a:hover {
+    color: #0056b3;
+  }
+  
+  nav ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  nav ul li {
+    display: inline;
+    margin: 0 5px;
+  }
+  
+  main {
+    width: 80%;
+    margin: 0 auto;
+  }
+
+  .red-dot {
+    width: 5mm;
+    height: 5mm;
+    background-color: red;
+    border-radius: 50%;
+  }
+
+  .recording-indicator-class:before {
+    content: '---';
+    color: red;
+    height: 1em;
+    width: 0.5em;
+    -webkit-border-radius: 2em;
+    border-radius: 2em;
+    background-color: red;
+  }

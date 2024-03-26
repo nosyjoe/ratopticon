@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <!-- <video id="video" autoplay playsinline controls></video> -->
+    <img id="preview" src="{{ url_for('static', filename='img/preview.jpg') }}" style="width: 640px; height: 360px; object-fit: cover;" />
+    <br>
+    <button id="start" {% if state['isRecording'] %} disabled {% endif %}>Start Recording</button>
+    <button id="stop" {% if not state['isRecording'] %} disabled {% endif %}>Stop Recording</button>
+    <p></p>
+    <div id="recording-indicator" style="display: none;">
+        <div id="recording-indicator-text" class="recording-indicator-class">Recording...</div>
+    </div>
+    <h2>Recorded Videos:</h2>
+    <ul id="recordings" style="align-items: center;"></ul>
+    <script>
+        const video = document.getElementById('video');
+
+        $('#start').click(function() {
+            $('#start').prop('disabled', true);
+            fetch("/start_recording", { method: 'POST' })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Network response was not ok: "+response.status+" "+response.statusText);
+                    }
+                    return response.json(); // This parses the JSON body of the response
+                })
+                .then(data => updateState(data))
+                .catch(error => {
+                    $('#start').prop('disabled', false);
+                    console.error("There was a problem with your fetch operation:", error);
+                });
+        });
+
+        $('#stop').click(function() {
+            $('#stop').prop('disabled', true);
+            fetch("/stop_recording", { method: 'POST' })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("/stop_recording Network response was not ok: "+response.status+" "+response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => updateState(data))
+                .catch(error => {
+                    $('#stop').prop('disabled', false);
+                    console.error("There was a problem with your fetch operation:", error);
+                });
+        });
+        
+        // Function to check if recording is ongoing
+        function fetchState() {
+            fetch("/update_state")
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Network response was not ok");
+                    }
+                    return response.json(); // This parses the JSON body of the response
+                })
+                .then(data => updateState(data))
+                .catch(error => {
+                    console.error("There was a problem with your fetch operation:", error);
+                });
+        }
+
+        // Check recording status every second
+        fetchState();
+        setInterval(fetchState, 1000);
+        
+        function deleteRecording(filename) {
+            url = '/recordings/'+filename;
+            fetch(url, { method: 'DELETE' })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(url + " Network response was not ok: "+response.status+" "+response.statusText);
+                    }
+                    console.log(response);
+                })
+                .catch(error => {
+                    console.error("There was a problem with your fetch operation:", error);
+                });
+        }
+
+        function updateState(state) {
+            if (state.isRecording) {
+                $('#recording-indicator').show();
+                $('#recording-indicator-text').text('Recording...(since: ' + state.recordingStartTime + ', duration: ' + state.recordingDuration + 's)');
+            } else {
+                $('#recording-indicator').hide();
+            }
+
+            $('#start').prop('disabled', !state.canStartRecording);
+            $('#stop').prop('disabled', !state.isRecording);
+
+            $('#recordings').empty();
+            state.recordings.forEach(function(recording) {
+                $('#recordings').append('<li><a href="/download/' + recording + '" download>' + recording + '</a>&nbsp;<a href="#" onClick="confirmDeletion(\''+ recording +'\')">delete</a></li>');
+            });
+
+            $('#preview').attr('src', '/static/img/' + state.previewFile);
+        }
+
+        function confirmDeletion(filename) {
+            if (confirm("Do you really want to delete the recording?")) {
+                // User clicked "OK"
+                deleteRecording(filename);
+            } else {
+                // User clicked "Cancel"
+                console.log('User chose not to proceed.');
+            }
+        }
+    </script>
+{% endblock content %}
+
