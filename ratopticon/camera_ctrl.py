@@ -32,6 +32,7 @@ recording_is_stopping = False
 def index():
     if recording_process is None:
         jpg_process = subprocess.Popen([libcam_jpeg,
+            "--nopreview",
             "-o", img_preview_path,
             "--width", "640",
             "--height", "360",
