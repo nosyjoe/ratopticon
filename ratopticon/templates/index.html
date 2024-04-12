@@ -96,7 +96,7 @@
                 $('#recordings').append('<li><a href="/download/' + recording + '" download>' + recording + '</a>&nbsp;<a href="#" onClick="confirmDeletion(\''+ recording +'\')">delete</a></li>');
             });
 
-            $('#preview').attr('src', '/static/img/' + state.previewFile);
+            $('#preview').attr('src', '/static/img/' + state.previewFile + "?" + new Date().getTime());
         }
 
         function confirmDeletion(filename) {
