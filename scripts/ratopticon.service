@@ -1,0 +1,15 @@
+[Unit]
+Description=Gunicorn instance to serve Ratopticon Flask App
+#Requires=gunicorn.socket
+After=network.target
+
+[Service]
+User=philipp
+Group=philipp
+WorkingDirectory=/home/philipp/flask-app
+Environment="PATH=/home/philipp/flask-app/venv/bin"
+#ExecStart=/home/philipp/flask-app/venv/bin/gunicorn --workers 3 -b 0.0.0.0:8080 "ratopticon:create_app()"
+ExecStart=/home/philipp/flask-app/venv/bin/gunicorn --workers 1 --bind unix:gunicorn.sock -m 000 "ratopticon:create_app()"
+
+[Install]
+WantedBy=multi-user.target
