@@ -2,14 +2,14 @@ import subprocess
 import psutil
 import signal
 import os
-from flask import render_template, jsonify, send_file, Blueprint
+from flask import render_template, jsonify, send_file, Blueprint, current_app
 from datetime import datetime
 import time
 
+bp = Blueprint('camera_ctrl', __name__)
+
 # config
-recordings_dir = '/home/philipp/ratopticon/recordings'
-img_preview_path = '/home/philipp/ratopticon/static/img/preview.jpg'
-img_header_path = '/home/philipp/ratopticon/static/img/header.jpg'
+recordings_dir = '/home/philipp/recordings'
 libcam_jpeg = '/usr/bin/libcamera-jpeg'
 libcam_vid = '/usr/bin/libcamera-vid'
 process_name = "libcamera-vid"
@@ -19,7 +19,6 @@ video_height=1080
 video_bitrate=2000000
 video_fps=30
 
-bp = Blueprint('camera_ctrl', __name__)
 
 # global variables
 recording_process = None
@@ -30,16 +29,7 @@ recording_is_stopping = False
 
 @bp.route('/')
 def index():
-    if recording_process is None:
-        jpg_process = subprocess.Popen([libcam_jpeg,
-            "--nopreview",
-            "-o", img_preview_path,
-            "--width", "640",
-            "--height", "360",
-            "-t", "50",
-        ])
-        jpg_process.poll()
-
+    update_preview_image()
     return render_template('index.html', state=get_state())
 
 @bp.route('/start_recording', methods=['POST'])
@@ -162,7 +152,22 @@ def get_recordings_list():
             recordings.append(filename)
     recordings.sort(reverse = True)
     return recordings
-    
+
+def get_img_path(app):
+    return os.path.join(current_app.root_path, 'static', 'img', 'preview.jpg')
+
+def update_preview_image():
+    if recording_process is None:
+        img_preview_path = get_img_path(current_app)
+        jpg_process = subprocess.Popen([libcam_jpeg,
+            "--nopreview",
+            "-o", img_preview_path,
+            "--width", "640",
+            "--height", "360",
+            "-t", "50",
+        ])
+        jpg_process.poll()
+
 def get_state():
     global recording_process, recording_filename, recording_start, recording_is_stopping
     pid = find_process_by_name(process_name)
@@ -175,6 +180,7 @@ def get_state():
 
 
     img_path = "header.jpg"
+    img_preview_path = get_img_path(current_app)
     if os.path.isfile(img_preview_path):
        img_path = "preview.jpg"
 
