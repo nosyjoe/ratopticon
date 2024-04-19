@@ -1,0 +1,72 @@
+- name: Install apt packages
+  apt:
+    update_cache: yes
+    name: "{{ basic_packages }}"
+    state: present
+
+- name: All packages installed.
+  debug:
+    msg: Packages have been successfully installed
+
+- name: Clone a github repository
+  git:
+    repo: https://github.com/nosyjoe/ratopticon.git
+    dest: "{{ web_app_path }}"
+    clone: yes
+    update: yes
+  become: yes
+  become_user: ratpi
+
+- name: Create recordings directory
+  ansible.builtin.file:
+    path: "{{ recordings_path }}"
+    state: directory
+    mode: '0755'
+    owner: ratpi
+    group: ratpi
+
+- name: Install ratopticon dependencies
+  ansible.builtin.pip:
+    name: 
+      - flask
+      - psutil
+      - gunicorn
+    virtualenv: "{{ web_app_virtualenv_path }}"
+
+# setup ratopticon gunicorn systemd service
+- name: Copy systemd flask app service
+  template:
+    src: ratopticon.service.j2
+    dest: '/etc/systemd/system/ratopticon.service'
+
+- name: Just force systemd to reread configs (2.4 and above)
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: enable ratopticon service on boot
+  ansible.builtin.systemd_service:
+    name: ratopticon
+    state: started
+    enabled: true
+
+# setup nginx
+- name: Copy nginx config file
+  copy:
+    src: ratopticon
+    dest: /etc/nginx/sites-available/ratopticon
+
+- name: Create a symbolic link
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/ratopticon
+    dest: /etc/nginx/sites-enabled/ratopticon
+    state: link
+
+- name: Remove default nginx config
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+
+- name: Reload service nginx, in all cases
+  ansible.builtin.systemd_service:
+    name: nginx.service
+    state: reloaded

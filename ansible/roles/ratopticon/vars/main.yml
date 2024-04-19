@@ -1,0 +1,14 @@
+basic_packages:
+  - wget
+  - curl
+  - htop
+  - python3
+  - python3-pip
+  - python3-virtualenv
+  - rsync
+  - tmux
+  - nginx
+
+recordings_path: "/home/ratpi/recordings"
+web_app_path: "/home/ratpi/ratopticon"
+web_app_virtualenv_path: "{{ web_app_path }}/venv"

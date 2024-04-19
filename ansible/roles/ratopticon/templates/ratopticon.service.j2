@@ -1,0 +1,15 @@
+[Unit]
+Description=Gunicorn instance to serve Ratopticon Flask App
+#Requires=gunicorn.socket
+After=network.target
+
+[Service]
+User=ratpi
+Group=ratpi
+WorkingDirectory={{ web_app_path }}
+Environment="PATH={{ web_app_virtualenv_path }}/bin"
+#ExecStart={{ web_app_virtualenv_path }}/bin/gunicorn --workers 3 -b 0.0.0.0:8080 wsgi:app
+ExecStart={{ web_app_virtualenv_path }}/bin/gunicorn --workers 1 --bind unix:gunicorn.sock -m 000 wsgi:app
+
+[Install]
+WantedBy=multi-user.target
