@@ -9,7 +9,7 @@ import time
 bp = Blueprint('camera_ctrl', __name__)
 
 # config
-recordings_dir = '/home/philipp/recordings'
+recordings_dir = '/home/ratpi/recordings'
 libcam_jpeg = '/usr/bin/libcamera-jpeg'
 libcam_vid = '/usr/bin/libcamera-vid'
 process_name = "libcamera-vid"
