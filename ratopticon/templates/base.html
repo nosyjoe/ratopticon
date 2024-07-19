@@ -1,12 +1,32 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <title>Raspberry Pi Video Recorder</title>
-  <script src="{{ url_for('static', filename='jquery-3.7.1.js') }}"></script>
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
-  <h1>Ratopticon - RaspPi Video Recorder</h1>
-  {% block content %}<p>No messages.</p>{% endblock content %}
-</body>
+    <head>
+        {% block head %}
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+        {% block styles %}
+            <!-- Bootstrap CSS -->
+            {{ bootstrap.load_css() }}
+        {% endblock %}
+
+        <script src="{{ url_for('static', filename='jquery-3.7.1.js') }}"></script>
+        <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+        <title>Raspberry Pi Video Recorder 2</title>
+        {% endblock %}
+    </head>
+    <body>
+        <!-- Your page content -->
+        <div class="container text-center">
+          
+        {% block content %}{% endblock %}
+        </div>
+
+        {% block scripts %}
+            <!-- Optional JavaScript -->
+            {{ bootstrap.load_js() }}
+        {% endblock %}
+    </body>
 </html>
