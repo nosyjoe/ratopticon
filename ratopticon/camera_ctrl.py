@@ -10,9 +10,11 @@ bp = Blueprint('camera_ctrl', __name__)
 
 # config
 recordings_dir = '/home/ratpi/recordings'
-#rpi_params_file = '/home/ratpi/rpicam_params'
-rpi_video_params_file = '/Users/philipp/rpicam_vid_params'
-rpi_image_params_file = '/Users/philipp/rpicam_image_params'
+
+rpi_video_params_file = '/home/ratpi/rpicam_vid_params'
+rpi_image_params_file = '/home/ratpi/rpicam_image_params'
+# rpi_video_params_file = '/Users/philipp/rpicam_vid_params'
+# rpi_image_params_file = '/Users/philipp/rpicam_image_params'
 rpicam_jpeg = '/usr/bin/rpicam-jpeg'
 rpicam_vid = '/usr/bin/rpicam-vid'
 process_name = "rpicam-vid"
