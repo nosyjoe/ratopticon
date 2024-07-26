@@ -33,12 +33,19 @@ default_video_options = {
     'saturation': 1.0,
     'awb': 'auto',
     'denoise': 'auto',
+    'autofocus-mode': 'manual',
+    'lens-position': '0.5',
+}
+
+default_pi5_video_format_options = {
     'profile': 'high',
     'level': '4.2',
     'codec': 'libav',
     'libav-format': 'mp4',
-    'autofocus-mode': 'manual',
-    'lens-position': '0.5',
+}
+
+default_video_format_options = {
+    
 }
 
 user_modifiable_video_settings = [
@@ -65,36 +72,68 @@ recorded_video_path = None
 recording_filename = None
 recording_start = None
 recording_is_stopping = False
+is_recording = False
 
 @bp.route('/')
 def index():
-    update_preview_image(get_img_path(current_app))
+    global is_recording
+    is_recording = False
     return render_template('index.html', state=get_state())
 
 @bp.route('/start_recording', methods=['POST'])
 def start_recording():
-    global recording_process, recorded_video_path, recording_filename, recording_start, recording_is_stopping
+    global recording_process, recorded_video_path, recording_filename, recording_start, recording_is_stopping, is_recording
+    stop_recording()
+    is_recording = True
+    time.sleep(1.5)
+    
     recording_is_stopping = False
+
     current_datetime = datetime.now()
-    formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H%M")
-    recording_filename = 'test-'+formatted_datetime+'.mp4'
-    recorded_video_path = recordings_dir+"/"+recording_filename
+    formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H%M%S")
+    base_name = 'test-'+formatted_datetime
     recording_start = current_datetime
+    
+    record_params = []
+    if is_pi5():
+        print("Raspberry Pi 5 detected.")
+        recording_filename = base_name+'.mp4'
+        recorded_video_path = recordings_dir+"/"+recording_filename
+        record_params = [rpicam_vid,
+            "--config", rpi_video_params_file,
+            "--inline",
+            "--nopreview",
+            "--signal",
+            'profile', 'high',
+            'level', '4.2',
+            'codec', 'libav',
+            'libav-format', 'mp4',
+            "-o", recorded_video_path
+        ]
+    else:
+        print("Raspberry Pi 4 or lower detected.")
+        recording_filename = base_name+'.h264'
+        recorded_video_path = recordings_dir+"/"+recording_filename
+        timestamps_path = recordings_dir+"/"+base_name+"_timestamps.txt"
+        record_params = [rpicam_vid,
+            "--config", rpi_video_params_file,
+            "--nopreview",
+            "--signal",
+            "-o", recorded_video_path
+        ]
+
     print("Recording to: "+recorded_video_path)
-    recording_process = subprocess.Popen([rpicam_vid,
-        "--config", rpi_video_params_file,
-        "--inline",
-        "--nopreview",
-        "--signal",
-        "-o", recorded_video_path
-    ])
+
+    
+
+    recording_process = subprocess.Popen(record_params)
     return get_state()
     
 
 
 @bp.route('/stop_recording', methods=['POST'])
 def stop_recording():
-    global recording_process, recording_is_stopping
+    global recording_process, recording_is_stopping, is_recording
     recording_is_stopping = True
     # Replace "process_name" with the name of the executable you're looking for
     
@@ -122,6 +161,11 @@ def stop_recording():
     else:
         print(f"Process with name '{process_name}' not found.")
     
+
+    # if not is_pi5():
+        # mkv_process = subprocess.Popen(['mkvmerge', '-o', 'test.mkv', '--timecodes', '0:timestamps.txt', h264file])
+
+    is_recording = False
     recording_process = None
     recording_is_stopping = False
     return get_state()
@@ -148,14 +192,19 @@ def download(filename):
     try:
         file_path = os.path.join(recordings_dir, filename)
         print("Downloading file: "+file_path)
-        return send_file(file_path, mimetype="video/x-mp4", as_attachment=True)
+        file_root, file_extension = os.path.splitext(filename)
+        # return send_file(file_path, mimetype="video/x-"+file_extension.lstrip('.'), as_attachment=True)
+        return send_file(file_path, as_attachment=True)
     except Exception as e:
         return str(e)
     
 @bp.route('/preview_update', methods=['GET'])
 def preview_update():
+    global is_recording
+    if is_recording:
+        return "Recording in progress, not updating preview image."
     try:
-        img_preview_path = get_img_path(current_app,)
+        img_preview_path = get_img_path(current_app)
         update_preview_image(img_preview_path)
         return {
             "imgPreviewPath": "preview.jpg",
@@ -206,7 +255,7 @@ def get_recordings_list():
     if not os.path.exists(recordings_dir):
         return [f"Folder {recordings_dir} not found."]
     for filename in os.listdir(recordings_dir):
-        if filename.endswith('.mp4'):
+        if filename.endswith('.mp4') or filename.endswith('.h264') or filename.endswith('.mkv'):
             recordings.append(filename)
     recordings.sort(reverse = True)
     return recordings
@@ -229,7 +278,8 @@ def update_preview_image(path):
             "--height", "360",
             "-t", "50",
         ])
-        jpg_process.poll()
+        return_code = jpg_process.poll()
+        print(f"Return code: {return_code}")
     else:
         print("Recording in progress, not updating preview image.")
 
@@ -247,6 +297,11 @@ def load_video_settings():
     
 def load_user_modifiable_video_settings(all_settings):
     return {key: value for key, value in all_settings.items() if key in user_modifiable_video_settings}
+
+def is_pi5():
+    with open('/proc/device-tree/model') as f:
+        model = f.read()
+    return model.startswith('Raspberry Pi 5')
 
 def get_state():
     global recording_process, recording_filename, recording_start, recording_is_stopping

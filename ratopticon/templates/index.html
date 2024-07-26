@@ -142,8 +142,8 @@
     }
 
     // Check recording status every second
-    // updatePreview();
-    // setInterval(updatePreview, 500);
+    updatePreview();
+    setInterval(updatePreview, 500);
 
     async function fetchSettings() {
         const response = await fetch('/settings');
