@@ -12,16 +12,31 @@
     
 </div>
 
+<div class="row justify-content-md-center"><div class="col-xs-12" style="height:16px;"></div></div>
+
 <div class="row justify-content-md-center">
     <div class="col-md-auto">
-        <button id="start" {% if state['isRecording'] %} disabled {% endif %}>Start Recording</button>
-        <button id="stop" {% if not state['isRecording'] %} disabled {% endif %}>Stop Recording</button>
+        <button id="start" {% if state['isRecording'] %} disabled {% endif %} class="btn btn-primary">Start Recording</button>
+        <button id="stop" {% if not state['isRecording'] %} disabled {% endif %} class="btn btn-primary">Stop Recording</button>
+        <span>&nbsp;</span>
+        <button id="start_preview" disabled class="btn btn-primary">Start Preview</button>
+        <button id="stop_preview" disabled class="btn btn-primary">Stop Preview</button>
         <p></p>
         <div id="recording-indicator" style="display: none;">
             <div id="recording-indicator-text" class="recording-indicator-class">Recording...</div>
         </div>
     </div>
 </div>
+
+<div class="row justify-content-md-center">
+    <div class="col-md-auto">
+        <div id="recording-indicator" style="display: none;">
+            <div id="recording-indicator-text" class="recording-indicator-class">Recording...</div>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-md-center"><div class="col-xs-12" style="height:16px;"></div></div>
 
 <div class="row justify-content-center">
     <div class="col-4">
@@ -31,7 +46,6 @@
         </ul>
     </div>
     <div class="col-6">
-        <a href="https://www.raspberrypi.com/documentation/computers/camera_software.html#camera-control-options" target="_blank">Doku</a>
         <form id="settingsForm" action="/settings" method="POST">
             <table class="table" >
                 <thead>
@@ -46,7 +60,8 @@
             </table>
             <button type="submit" class="btn btn-primary">Konfiguration absenden</button>
         </form>
-        
+        <br/>
+        <a href="https://www.raspberrypi.com/documentation/computers/camera_software.html#camera-control-options" target="_blank">Dokumentation Video-Parameter</a>
     </div>
 </div>
 
@@ -116,6 +131,19 @@
                 console.error("There was a problem with your fetch operation:", error);
             });
     });
+
+    $('#start_preview').click(function() {
+        $('#start_preview').prop('disabled', true);
+        pollingIntervallId = setInterval(updatePreview, 500);
+    });
+
+    $('#stop_preview').click(function() {
+        $('#stop_preview').prop('disabled', true);
+        if (pollingIntervallId != null) {
+            clearInterval(pollingIntervallId);
+            pollingIntervallId = null; 
+        }
+    });
     
     // Function to check if recording is ongoing
     async function fetchState() {
@@ -139,11 +167,17 @@
             throw new Error("Network response was not ok: "+response.status+" "+response.statusText);
         }
         $('#preview').attr('src', '/static/img/preview.jpg?' + Date.now());
+        if (pollingIntervallId != null) {
+            $('#stop_preview').prop('disabled', false);
+            $('#start_preview').prop('disabled', true);
+        } else {
+            $('#stop_preview').prop('disabled', true);
+            $('#start_preview').prop('disabled', false);
+        }
     }
 
     // Check recording status every second
     updatePreview();
-    setInterval(updatePreview, 500);
 
     async function fetchSettings() {
         const response = await fetch('/settings');
@@ -181,21 +215,17 @@
 
     function updateState(state) {
         if (state.isRecording) {
-            if (pollingIntervallId == null) {
-                pollingIntervallId = setInterval(fetchState, 1000);
-            }
             $('#recording-indicator').show();
             $('#recording-indicator-text').text('Recording...(since: ' + state.recordingStartTime + ', duration: ' + state.recordingDuration + 's)');
         } else {
-            if (pollingIntervallId != null) {
-                clearInterval(pollingIntervallId);
-                pollingIntervallId = null;
-            }
             $('#recording-indicator').hide();
         }
 
         $('#start').prop('disabled', !state.canStartRecording);
         $('#stop').prop('disabled', !state.isRecording);
+        $('#start_preview').prop('disabled', state.isRecording || pollingIntervallId != null);
+        $('#stop_preview').prop('disabled', state.isRecording || pollingIntervallId == null);
+        
 
         $('#recordings').empty();
         state.recordings.forEach(function(recording) {

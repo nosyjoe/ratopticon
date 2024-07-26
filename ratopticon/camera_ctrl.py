@@ -13,11 +13,14 @@ recordings_dir = '/home/ratpi/recordings'
 
 rpi_video_params_file = '/home/ratpi/rpicam_vid_params'
 rpi_image_params_file = '/home/ratpi/rpicam_image_params'
+lockfile_preview = '/home/ratpi/preview.lock'
+lockfile_recording = '/home/ratpi/recording.lock'
 # rpi_video_params_file = '/Users/philipp/rpicam_vid_params'
 # rpi_image_params_file = '/Users/philipp/rpicam_image_params'
 rpicam_jpeg = '/usr/bin/rpicam-jpeg'
 rpicam_vid = '/usr/bin/rpicam-vid'
 process_name = "rpicam-vid"
+
 
 # video settings
 default_video_options = {
@@ -37,17 +40,6 @@ default_video_options = {
     'lens-position': '0.5',
 }
 
-default_pi5_video_format_options = {
-    'profile': 'high',
-    'level': '4.2',
-    'codec': 'libav',
-    'libav-format': 'mp4',
-}
-
-default_video_format_options = {
-    
-}
-
 user_modifiable_video_settings = [
     'exposure',
     'sharpness',
@@ -60,11 +52,6 @@ user_modifiable_video_settings = [
     'lens-position',
 ]
 
-video_width=1920
-video_height=1080
-video_bitrate=2000000
-video_fps=30
-
 
 # global variables
 recording_process = None
@@ -72,26 +59,23 @@ recorded_video_path = None
 recording_filename = None
 recording_start = None
 recording_is_stopping = False
-is_recording = False
 
 @bp.route('/')
 def index():
-    global is_recording
-    is_recording = False
     return render_template('index.html', state=get_state())
 
 @bp.route('/start_recording', methods=['POST'])
 def start_recording():
-    global recording_process, recorded_video_path, recording_filename, recording_start, recording_is_stopping, is_recording
+    global recording_process, recorded_video_path, recording_filename, recording_start, recording_is_stopping
     stop_recording()
-    is_recording = True
+    lock_recording()
     time.sleep(1.5)
     
     recording_is_stopping = False
 
     current_datetime = datetime.now()
     formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H%M%S")
-    base_name = 'test-'+formatted_datetime
+    base_name = 'recording-'+formatted_datetime
     recording_start = current_datetime
     
     record_params = []
@@ -104,10 +88,10 @@ def start_recording():
             "--inline",
             "--nopreview",
             "--signal",
-            'profile', 'high',
-            'level', '4.2',
-            'codec', 'libav',
-            'libav-format', 'mp4',
+            '--profile', 'high',
+            '--level', '4.2',
+            '--codec', 'libav',
+            '--libav-format', 'mp4',
             "-o", recorded_video_path
         ]
     else:
@@ -133,7 +117,7 @@ def start_recording():
 
 @bp.route('/stop_recording', methods=['POST'])
 def stop_recording():
-    global recording_process, recording_is_stopping, is_recording
+    global recording_process, recording_is_stopping
     recording_is_stopping = True
     # Replace "process_name" with the name of the executable you're looking for
     
@@ -165,9 +149,9 @@ def stop_recording():
     # if not is_pi5():
         # mkv_process = subprocess.Popen(['mkvmerge', '-o', 'test.mkv', '--timecodes', '0:timestamps.txt', h264file])
 
-    is_recording = False
     recording_process = None
     recording_is_stopping = False
+    unlock_recording()
     return get_state()
 
 @bp.route('/update_state', methods=['GET'])
@@ -200,8 +184,7 @@ def download(filename):
     
 @bp.route('/preview_update', methods=['GET'])
 def preview_update():
-    global is_recording
-    if is_recording:
+    if is_recording_locked():
         return "Recording in progress, not updating preview image."
     try:
         img_preview_path = get_img_path(current_app)
@@ -265,6 +248,10 @@ def get_img_path(app, suffix=""):
 
 def update_preview_image(path):
     global recording_process, recording_is_stopping
+    if is_recording_locked():
+        return "Recording in progress, not updating preview image."
+
+    lock_preview()
 
     if not os.path.exists(rpicam_jpeg):
         return "rpicam-jpeg not found."
@@ -280,8 +267,10 @@ def update_preview_image(path):
         ])
         return_code = jpg_process.poll()
         print(f"Return code: {return_code}")
+        unlock_preview()
     else:
         print("Recording in progress, not updating preview image.")
+        unlock_preview()
 
 def load_video_settings():
     merged_options = default_video_options.copy()
@@ -321,7 +310,7 @@ def get_state():
 
 
     return {
-        "isRecording": pid != None,
+        "isRecording": is_recording_locked(),
         "canStartRecording": pid == None and recording_is_stopping == False,
         "recordingFilename": recording_filename,
         "recordingStartTime": startString,
@@ -329,3 +318,34 @@ def get_state():
         "recordings": get_recordings_list(),
         "previewFile": img_path
     }
+
+
+
+def create_lock_file(lock_file_path):
+    with open(lock_file_path, 'w') as lock_file:
+        lock_file.write('lock')
+
+def remove_lock_file(lock_file_path):
+    if os.path.exists(lock_file_path):
+        os.remove(lock_file_path)
+
+def is_locked(lock_file_path):
+    return os.path.exists(lock_file_path)
+
+def is_recording_locked():
+    return is_locked(lockfile_recording)
+
+def lock_recording():
+    create_lock_file(lockfile_recording)
+
+def unlock_recording():
+    remove_lock_file(lockfile_recording)
+
+def is_preview_locked():
+    return is_locked(lockfile_preview)
+
+def lock_preview():
+    create_lock_file(lockfile_preview)
+
+def unlock_preview():
+    remove_lock_file(lockfile_preview)
