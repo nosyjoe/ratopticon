@@ -126,8 +126,8 @@ def stop_recording():
     pid = find_process_by_name(process_name)
     # if pid is not None:
     if recording_process is not None:
-        recording_process.send_signal(signal.SIGUSR1)
-        time.sleep(0.2)
+        recording_process.send_signal(signal.SIGUSR2)
+        time.sleep(0.5)
         recording_process.terminate()
         result = None
         while result is None:
