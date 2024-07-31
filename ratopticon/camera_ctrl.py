@@ -27,7 +27,7 @@ default_video_options = {
     'timeout': 0,  # '0' means 'infinite
     'width': 1920,
     'height': 1080,
-    'bitrate': 2000000,
+    'bitrate': 4000000,
     'framerate': 30,
     'exposure': 'long',
     'sharpness': 1.2,
@@ -41,6 +41,8 @@ default_video_options = {
 }
 
 user_modifiable_video_settings = [
+    'bitrate',
+    'framerate',
     'exposure',
     'sharpness',
     'contrast',
