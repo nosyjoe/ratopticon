@@ -30,6 +30,7 @@
     name: 
       - flask
       - psutil
+      - bootstrap-flask
       - gunicorn
     virtualenv: "{{ web_app_virtualenv_path }}"
 
