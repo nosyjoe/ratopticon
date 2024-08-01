@@ -58,6 +58,7 @@
                     <tr><td>contrast</td><td><input type="text" class="form-control" placeholder="Username" aria-describedby="basic-addon1" value="1.4"></td>
                 </tbody>
             </table>
+            <button id="btn-settings-defaults" class="btn btn-primary">Standardwerte</button>
             <button type="submit" class="btn btn-primary">Konfiguration absenden</button>
         </form>
         <br/>
@@ -68,6 +69,7 @@
 <script>
     const video = document.getElementById('video');
     let pollingIntervallId = null;
+    var defaultVideoSettings = {};
 
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('settingsForm');
@@ -86,7 +88,8 @@
                 throw new Error('Network response was not ok.');
             })
             .then(data => {
-                updateSettings(data);
+                defaultVideoSettings = data.defaultSettings;
+                updateSettings(data.currentSettings);
             })
             .catch(error => {
                 console.error('There has been a problem with your fetch operation:', error);
@@ -142,6 +145,10 @@
             pollingIntervallId = null; 
         }
     });
+
+    $('#btn-settings-defaults').click(function() {
+        updateSettings(defaultVideoSettings);
+    });
     
     // Function to check if recording is ongoing
     async function fetchState() {
@@ -177,6 +184,7 @@
     // Check recording status every second
     updatePreview();
 
+    // TODO merge with submit button action (duplicate code)
     async function fetchSettings() {
         const response = await fetch('/settings');
         if (!response.ok) {
@@ -184,7 +192,8 @@
         }
 
         settings = await response.json();
-        updateSettings(settings);
+        defaultVideoSettings = settings.defaultSettings;
+        updateSettings(settings.currentSettings);
     }
     fetchSettings();
 

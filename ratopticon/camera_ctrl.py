@@ -54,6 +54,18 @@ user_modifiable_video_settings = [
     'lens-position',
 ]
 
+user_modifiable_image_settings = [
+    'exposure',
+    'sharpness',
+    'contrast',
+    'brightness',
+    'saturation',
+    'awb',
+    'denoise',
+    'autofocus-mode',
+    'lens-position',
+]
+
 
 # global variables
 recording_process = None
@@ -100,7 +112,6 @@ def start_recording():
         print("Raspberry Pi 4 or lower detected.")
         recording_filename = base_name+'.h264'
         recorded_video_path = recordings_dir+"/"+recording_filename
-        timestamps_path = recordings_dir+"/"+base_name+"_timestamps.txt"
         record_params = [rpicam_vid,
             "--config", rpi_video_params_file,
             "--nopreview",
@@ -209,16 +220,19 @@ def update_settings():
             for key, value in merged_options.items():
                 file.write(f"{key}={value}\n")
         with open(rpi_image_params_file, 'w') as file:
-            for key, value in load_user_modifiable_video_settings(merged_options).items():
+            for key, value in load_user_modifiable_image_settings(merged_options).items():
                 file.write(f"{key}={value}\n")
 
-        return load_user_modifiable_video_settings(merged_options)
+        return get_settings()
     except Exception as e:
         return str(e)
     
 @bp.route('/settings', methods=['GET'])
 def get_settings():
-    return load_user_modifiable_video_settings(load_video_settings())
+    return {
+        "currentSettings": load_user_modifiable_video_settings(load_video_settings()),
+        "defaultSettings": load_user_modifiable_video_settings(default_video_options)
+    }
         
 def find_process_by_name(process_name):
     for process in psutil.process_iter(['pid', 'name']):
@@ -288,6 +302,9 @@ def load_video_settings():
     
 def load_user_modifiable_video_settings(all_settings):
     return {key: value for key, value in all_settings.items() if key in user_modifiable_video_settings}
+
+def load_user_modifiable_image_settings(all_settings):
+    return {key: value for key, value in all_settings.items() if key in user_modifiable_image_settings}
 
 def is_pi5():
     with open('/proc/device-tree/model') as f:
