@@ -60,6 +60,7 @@
             </table>
             <button id="btn-settings-defaults" class="btn btn-primary">Standardwerte</button>
             <button type="submit" class="btn btn-primary">Konfiguration absenden</button>
+            <p id="settings-submit-result"></p>
         </form>
         <br/>
         <a href="https://www.raspberrypi.com/documentation/computers/camera_software.html#camera-control-options" target="_blank">Dokumentation Video-Parameter</a>
@@ -90,9 +91,13 @@
             .then(data => {
                 defaultVideoSettings = data.defaultSettings;
                 updateSettings(data.currentSettings);
+                $('#settings-submit-result').text('Einstellungen erfolgreich übernommen');
+                setTimeout(function() { $('#settings-submit-result').text(''); }, 2000);
             })
             .catch(error => {
                 console.error('There has been a problem with your fetch operation:', error);
+                $('#settings-submit-result').text('Fehler');
+                setTimeout(function() { $('#settings-submit-result').text(''); }, 2000);
             });
         });
     });
