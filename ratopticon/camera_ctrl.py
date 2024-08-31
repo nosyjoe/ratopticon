@@ -5,6 +5,7 @@ import os
 from flask import render_template, jsonify, send_file, Blueprint, current_app, request
 from datetime import datetime
 import time
+import re
 
 bp = Blueprint('camera_ctrl', __name__)
 
@@ -28,15 +29,19 @@ default_video_options = {
     'width': 1920,
     'height': 1080,
     'bitrate': 4000000,
-    'framerate': 30,
+    'framerate': 15,
     'exposure': 'long',
-    'sharpness': 1.2,
+    # 0.0 - open end. 1.0 is default sharpness, < is less, > is more
+    'sharpness': 1.0,
+    # spectrum from 0.0 to Double.max. 1.0 is default, value < 1.0 is less, value > is more
     'contrast': 1.4,
-    'brightness': 0.2,
+    # spectrum from -1.0 to 1.0. 0.0 is standard, value < 1.0 is less, value > is more
+    'brightness': 0.0,
+    # spectrum from 0.0 to Double.max. 1.0 is default, value < 1.0 is less, value > is more
     'saturation': 1.0,
     'awb': 'auto',
     'denoise': 'auto',
-    'autofocus-mode': 'manual',
+    'autofocus-mode': 'continuous',
     'lens-position': '0.5',
 }
 
@@ -66,6 +71,57 @@ user_modifiable_image_settings = [
     'lens-position',
 ]
 
+user_modifiable_video_settings_info = {
+    'bitrate': {
+        'type': 'number',
+        'hint': ""
+    },
+    'framerate': {
+        'type': 'number',
+        'hint': ""
+    },
+    'exposure': {
+        'type': 'select',
+        'options': ['sport', 'normal', 'long'],
+        'hint': ""
+    },
+    'sharpness': {
+        'type': 'number',
+        'hint': "0.0 - 10. 1.0: default, < 1: less, > 1 is more"
+    },
+    'contrast': {
+        'type': 'number',
+        'hint': ""
+    },
+    'brightness': {
+        'type': 'number',
+        'hint': ""
+    },
+    'saturation': {
+        'type': 'number',
+        'hint': ""
+    },
+    'awb': {
+        'type': 'select',
+        'options': ['auto', 'incandescent', 'tungsten', 'fluorescent', 'indoor', 'daylight', 'cloudy'],
+        'hint': ""
+    },
+    'denoise': {
+        'type': 'select',
+        'options': ['auto', 'off', 'cdn_off', 'cdn_fast', 'cdn_hq'],
+        'hint': "",
+    },
+    'autofocus-mode': {
+        'type': 'select',
+        'options': ['default', 'manual', 'auto', 'continuous'],
+        'hint': "",
+    },
+    'lens-position': {
+        'type': 'number',
+        'hint': "0.0: infinity, 1 / number = focus distance, e.g. 2.0 = 0.5m"
+    }
+}
+
 
 # global variables
 recording_process = None
@@ -76,7 +132,13 @@ recording_is_stopping = False
 
 @bp.route('/')
 def index():
-    return render_template('index.html', state=get_state())
+    return render_template('index.html', state=get_state(), ratpi_nr=get_host_number(), 
+                           currentSettings=get_current_settings_and_info())
+
+def augment_setting_with_hint(key, value):
+    new_value = user_modifiable_video_settings_info[key]
+    new_value['value'] = value
+    return new_value
 
 @bp.route('/start_recording', methods=['POST'])
 def start_recording():
@@ -210,18 +272,14 @@ def preview_update():
     
 @bp.route('/settings', methods=['POST'])
 def update_settings():
-    merged_options = default_video_options.copy()
     try:
+        merged_options = {}
         for key in default_video_options:
             if key in request.form:
+                merged_options[key] = default_video_options[key]
                 merged_options[key] = request.form[key]
 
-        with open(rpi_video_params_file, 'w') as file:
-            for key, value in merged_options.items():
-                file.write(f"{key}={value}\n")
-        with open(rpi_image_params_file, 'w') as file:
-            for key, value in load_user_modifiable_image_settings(merged_options).items():
-                file.write(f"{key}={value}\n")
+        write_settings_to_files(merged_options)
 
         return get_settings()
     except Exception as e:
@@ -233,6 +291,14 @@ def get_settings():
         "currentSettings": load_user_modifiable_video_settings(load_video_settings()),
         "defaultSettings": load_user_modifiable_video_settings(default_video_options)
     }
+
+@bp.route('/settings', methods=['DELETE'])
+def delete_settings():
+    try:
+        write_settings_to_files(default_video_options)
+        return {'success': True}
+    except Exception as e:
+        return str(e)
         
 def find_process_by_name(process_name):
     for process in psutil.process_iter(['pid', 'name']):
@@ -289,16 +355,20 @@ def update_preview_image(path):
         unlock_preview()
 
 def load_video_settings():
-    merged_options = default_video_options.copy()
     try:
+        merged_options = {}
         with open(rpi_video_params_file, 'r') as file:
             lines = file.readlines()
             for line in lines:
                 key, value = line.split('=')
+                merged_options[key] = default_video_options[key]
                 merged_options[key] = value.rstrip('\n\r')
         return merged_options
     except FileNotFoundError:
-        return merged_options
+        return default_video_options
+    except ValueError:
+        print(f"ValueError")
+        return default_video_options
     
 def load_user_modifiable_video_settings(all_settings):
     return {key: value for key, value in all_settings.items() if key in user_modifiable_video_settings}
@@ -338,7 +408,18 @@ def get_state():
         "previewFile": img_path
     }
 
+def get_host_number(): 
+    hostname = os.uname()[1]
 
+    match = re.search(r'(\d+)$', hostname)
+    if match:
+        match.group(1)
+    else:
+        "?"
+
+def get_current_settings_and_info():
+    currentSettings = load_user_modifiable_video_settings(load_video_settings())
+    return {k: augment_setting_with_hint(k, v) for k, v in currentSettings.items()}
 
 def create_lock_file(lock_file_path):
     with open(lock_file_path, 'w') as lock_file:
@@ -368,3 +449,11 @@ def lock_preview():
 
 def unlock_preview():
     remove_lock_file(lockfile_preview)
+
+def write_settings_to_files(settings):
+    with open(rpi_video_params_file, 'w') as file:
+            for key, value in settings.items():
+                file.write(f"{key}={value}\n")
+    with open(rpi_image_params_file, 'w') as file:
+        for key, value in load_user_modifiable_image_settings(settings).items():
+            file.write(f"{key}={value}\n")
