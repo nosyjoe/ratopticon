@@ -24,7 +24,7 @@ process_name = "rpicam-vid"
 
 
 # video settings
-default_video_options = {
+DEFAULT_VIDEO_OPTIONS = {
     'timeout': 0,  # '0' means 'infinite
     'width': 1920,
     'height': 1080,
@@ -274,9 +274,9 @@ def preview_update():
 def update_settings():
     try:
         merged_options = {}
-        for key in default_video_options:
+        for key in DEFAULT_VIDEO_OPTIONS:
+            merged_options[key] = DEFAULT_VIDEO_OPTIONS[key]
             if key in request.form:
-                merged_options[key] = default_video_options[key]
                 merged_options[key] = request.form[key]
 
         write_settings_to_files(merged_options)
@@ -289,13 +289,13 @@ def update_settings():
 def get_settings():
     return {
         "currentSettings": load_user_modifiable_video_settings(load_video_settings()),
-        "defaultSettings": load_user_modifiable_video_settings(default_video_options)
+        "defaultSettings": load_user_modifiable_video_settings(DEFAULT_VIDEO_OPTIONS)
     }
 
 @bp.route('/settings', methods=['DELETE'])
 def delete_settings():
     try:
-        write_settings_to_files(default_video_options)
+        write_settings_to_files(DEFAULT_VIDEO_OPTIONS)
         return {'success': True}
     except Exception as e:
         return str(e)
@@ -357,18 +357,19 @@ def update_preview_image(path):
 def load_video_settings():
     try:
         merged_options = {}
+        for key in DEFAULT_VIDEO_OPTIONS:
+            merged_options[key] = DEFAULT_VIDEO_OPTIONS[key]
         with open(rpi_video_params_file, 'r') as file:
             lines = file.readlines()
             for line in lines:
                 key, value = line.split('=')
-                merged_options[key] = default_video_options[key]
                 merged_options[key] = value.rstrip('\n\r')
         return merged_options
     except FileNotFoundError:
-        return default_video_options
+        return DEFAULT_VIDEO_OPTIONS
     except ValueError:
         print(f"ValueError")
-        return default_video_options
+        return DEFAULT_VIDEO_OPTIONS
     
 def load_user_modifiable_video_settings(all_settings):
     return {key: value for key, value in all_settings.items() if key in user_modifiable_video_settings}
@@ -451,6 +452,10 @@ def unlock_preview():
     remove_lock_file(lockfile_preview)
 
 def write_settings_to_files(settings):
+    print(settings)
+    print("")
+    print(f"defaults: {DEFAULT_VIDEO_OPTIONS}")
+
     with open(rpi_video_params_file, 'w') as file:
             for key, value in settings.items():
                 file.write(f"{key}={value}\n")
