@@ -5,7 +5,6 @@
 
 <div class="row justify-content-center">
     <div class="col-6">
-        <!-- <video id="video" autoplay playsinline controls></video> -->
         <img id="preview" src="{{ url_for('static', filename='img/preview.jpg') }}" style="object-fit: cover;" />
     </div>
 
@@ -109,14 +108,15 @@
             })
             .catch(error => {
                 console.error('There has been a problem with your fetch operation:', error);
-                $('#settings-submit-result').text('Fehler');
-                setTimeout(function() { $('#settings-submit-result').text(''); }, 2000);
+                document.getElementById('settings-submit-result').textContent = 'Fehler';
+                setTimeout(function() { document.getElementById('settings-submit-result').textContent = ''; }, 2000);
             });
         });
     });
 
-    $('#start').click(function() {
-        $('#start').prop('disabled', true);
+    
+    document.getElementById('start').addEventListener("click", function() {
+        document.getElementById('start').disabled = true;
         if (pollingIntervallId != null) {
             clearInterval(pollingIntervallId);
             pollingIntervallId = null; 
@@ -130,13 +130,13 @@
             })
             .then(data => updateState(data))
             .catch(error => {
-                $('#start').prop('disabled', false);
+                document.getElementById('start').disabled = true;
                 console.error("There was a problem with your fetch operation:", error);
             });
     });
 
-    $('#stop').click(function() {
-        $('#stop').prop('disabled', true);
+    document.getElementById('stop').addEventListener("click", function() {
+        document.getElementById('stop').disabled = true;
         fetch("/stop_recording", { method: 'POST' })
             .then(response => {
                 if (!response.ok) {
@@ -146,25 +146,25 @@
             })
             .then(data => updateState(data))
             .catch(error => {
-                $('#stop').prop('disabled', false);
+                document.getElementById('stop').disabled = false;
                 console.error("There was a problem with your fetch operation:", error);
             });
     });
 
-    $('#start_preview').click(function() {
-        $('#start_preview').prop('disabled', true);
+    document.getElementById('start_preview').addEventListener("click", function(){
+        document.getElementById('start_preview').disabled = true;
         pollingIntervallId = setInterval(updatePreview, 500);
     });
 
-    $('#stop_preview').click(function() {
-        $('#stop_preview').prop('disabled', true);
+    document.getElementById('stop_preview').addEventListener('click', function() {
+        document.getElementById('stop_preview').disabled = true;
         if (pollingIntervallId != null) {
             clearInterval(pollingIntervallId);
             pollingIntervallId = null; 
         }
     });
 
-    $('#btn-settings-defaults').click(function() {
+    document.getElementById('btn-settings-defaults').addEventListener('click', function() {
         fetch('/settings', { method: 'DELETE' })
             .then(response => {
                 if (response.ok) {
@@ -196,13 +196,13 @@
         if (!response.ok) {
             throw new Error("Network response was not ok: "+response.status+" "+response.statusText);
         }
-        $('#preview').attr('src', '/static/img/preview.jpg?' + Date.now());
+        document.getElementById('preview').src = '/static/img/preview.jpg?' + Date.now()
         if (pollingIntervallId != null) {
-            $('#stop_preview').prop('disabled', false);
-            $('#start_preview').prop('disabled', true);
+            document.getElementById('stop_preview').disabled = false;
+            document.getElementById('start_preview').disabled = true;
         } else {
-            $('#stop_preview').prop('disabled', true);
-            $('#start_preview').prop('disabled', false);
+            document.getElementById('stop_preview').disabled = true;
+            document.getElementById('start_preview').disabled = false;
         }
     }
 
@@ -224,22 +224,23 @@
     }
 
     function updateState(state) {
+        let indicator = document.getElementById('recording-indicator');
         if (state.isRecording) {
-            $('#recording-indicator').show();
-            $('#recording-indicator-text').text('Recording...(since: ' + state.recordingStartTime + ', duration: ' + state.recordingDuration + 's)');
+            indicator.style.display = '';
+            indicator.textContent = 'Recording...(since: ' + state.recordingStartTime + ', duration: ' + state.recordingDuration + 's)';
         } else {
-            $('#recording-indicator').hide();
+            indicator.style.display = 'none';
         }
 
-        $('#start').prop('disabled', !state.canStartRecording);
-        $('#stop').prop('disabled', !state.isRecording);
-        $('#start_preview').prop('disabled', state.isRecording || pollingIntervallId != null);
-        $('#stop_preview').prop('disabled', state.isRecording || pollingIntervallId == null);
+        document.getElementById('start').disabled = !state.canStartRecording;
+        document.getElementById('stop').disabled = !state.isRecording;
+        document.getElementById('start_preview').disabled = state.isRecording || pollingIntervallId != null;
+        document.getElementById('stop_preview').disabled = state.isRecording || pollingIntervallId == null;
         
-
-        $('#recordings').empty();
+        let recordings = document.getElementById('recordings');
+        recordings.innerHTML = '';
         state.recordings.forEach(function(recording) {
-            $('#recordings').append('<li class="list-group-item"><a href="/download/' + recording + '" download>' + recording + '</a>&nbsp;<a href="#" onClick="confirmDeletion(\''+ recording +'\')">delete</a></li>');
+            recordings.innerHTML += '<li class="list-group-item"><a href="/download/' + recording + '" download>' + recording + '</a>&nbsp;<a href="#" onClick="confirmDeletion(\''+ recording +'\')">delete</a></li>'
         });
     }
 
