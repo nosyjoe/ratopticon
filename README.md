@@ -20,8 +20,28 @@ Run with
 
 ```
 # working folder flask-app
-python3 -m flask --app ratopticon run --port 8000 --debug
+python -m flask --app ratopticon run --port 8000 -h 0.0.0.0 --debug
 
 ```
 
+# Useful commands
+
+## Set ip-address
+
+```
+sudo nmcli con mod 'Wired connection 1' ipv4.addresses 192.168.0.254/24 ipv4.method manual
+sudo nmcli con up 'Wired connection 1'
+
+# gateway not needed atm
+sudo nmcli con mod eth0 ipv4.gateway 192.168.0.1
+```
+
+# Enter dev mode in Pi
+
+```
+sudo systemctl stop ratopticon
+cd ratopticon/
+source venv/bin/activate
+python -m flask --app ratopticon run --port 8000 -h 0.0.0.0 --debug
+```
 
