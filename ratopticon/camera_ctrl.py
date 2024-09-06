@@ -414,9 +414,9 @@ def get_host_number():
 
     match = re.search(r'(\d+)$', hostname)
     if match:
-        match.group(1)
+        return match.group(1)
     else:
-        "?"
+        return "?"
 
 def get_current_settings_and_info():
     currentSettings = load_user_modifiable_video_settings(load_video_settings())
