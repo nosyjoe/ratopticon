@@ -8,7 +8,7 @@ mkdir flask-app
 cd flask-app
 git clone https://github.com/nosyjoe/ratopticon.git
 
-pythopython3 -m venv venv
+python3 -m venv venv
 source venv/bin/activate
 
 python3 -m pip install --upgrade pip
@@ -16,12 +16,18 @@ python3 -m pip install --upgrade pip
 python3 -m pip install flask gunicorn psutils
 ```
 
-Run with 
+Run with
 
 ```
 # working folder flask-app
 python -m flask --app ratopticon run --port 8000 -h 0.0.0.0 --debug
 
+```
+
+Run tests with
+
+```
+python3 -m unittest
 ```
 
 # Useful commands
@@ -45,4 +51,3 @@ cd ratopticon/
 source venv/bin/activate
 python -m flask --app ratopticon run --port 8000 -h 0.0.0.0 --debug
 ```
-

@@ -1,5 +1,5 @@
 import subprocess
-import psutil
+import psutils
 import signal
 import os
 from flask import render_template, jsonify, send_file, Blueprint, current_app, request
@@ -132,11 +132,11 @@ recording_is_stopping = False
 
 @bp.route('/')
 def index():
-    return render_template('index.html', state=get_state(), ratpi_nr=get_host_number(), 
+    return render_template('index.html', state=get_state(), ratpi_nr=get_host_number(),
                            currentSettings=get_current_settings_and_info())
 
 def augment_setting_with_hint(key, value):
-    new_value = user_modifiable_video_settings_info[key]
+    new_value = user_modifiable_video_settings_info[key].copy()
     new_value['value'] = value
     return new_value
 
@@ -146,14 +146,14 @@ def start_recording():
     stop_recording()
     lock_recording()
     time.sleep(1.5)
-    
+
     recording_is_stopping = False
 
     current_datetime = datetime.now()
     formatted_datetime = current_datetime.strftime("%Y-%m-%d_%H%M%S")
     base_name = 'recording-'+formatted_datetime
     recording_start = current_datetime
-    
+
     record_params = []
     if is_pi5():
         print("Raspberry Pi 5 detected.")
@@ -183,11 +183,11 @@ def start_recording():
 
     print("Recording to: "+recorded_video_path)
 
-    
+
 
     recording_process = subprocess.Popen(record_params)
     return get_state()
-    
+
 
 
 @bp.route('/stop_recording', methods=['POST'])
@@ -195,7 +195,7 @@ def stop_recording():
     global recording_process, recording_is_stopping
     recording_is_stopping = True
     # Replace "process_name" with the name of the executable you're looking for
-    
+
     # Replace "signal.SIGTERM" with the desired signal, such as signal.SIGKILL for termination
     #signal_code = signal.SIGTERM
     pid = find_process_by_name(process_name)
@@ -219,7 +219,7 @@ def stop_recording():
         # send_signal_to_process(pid, signal.SIGKILL)
     else:
         print(f"Process with name '{process_name}' not found.")
-    
+
 
     # if not is_pi5():
         # mkv_process = subprocess.Popen(['mkvmerge', '-o', 'test.mkv', '--timecodes', '0:timestamps.txt', h264file])
@@ -236,7 +236,7 @@ def update_state():
 @bp.route('/recordings', methods=['GET'])
 def get_recordings():
     return jsonify(get_recordings_list())
-    
+
 @bp.route('/recordings/<filename>', methods=['DELETE'])
 def delete_recordings(filename):
     try:
@@ -247,7 +247,7 @@ def delete_recordings(filename):
         return "File "+file_path+" deleted successfully."
     except OSError as e:
         return jsonify({"error": f"Error deleting the file: {e}"}), 500
-    
+
 @bp.route('/download/<filename>', methods=['GET'])
 def download(filename):
     try:
@@ -260,7 +260,7 @@ def download(filename):
         return send_file(file_path, as_attachment=True)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+
 @bp.route('/preview_update', methods=['GET'])
 def preview_update():
     if is_recording_locked():
@@ -273,7 +273,7 @@ def preview_update():
         }
     except Exception as e:
         return str(e)
-    
+
 @bp.route('/settings', methods=['POST'])
 def update_settings():
     try:
@@ -288,7 +288,7 @@ def update_settings():
         return get_settings()
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+
 @bp.route('/settings', methods=['GET'])
 def get_settings():
     return {
@@ -303,7 +303,7 @@ def delete_settings():
         return {'success': True}
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-        
+
 def find_process_by_name(process_name):
     for process in psutil.process_iter(['pid', 'name']):
         if process.info['name'] == process_name:
@@ -318,7 +318,7 @@ def send_signal_to_process(pid, signal_code):
         print(f"Signal {signal_code} sent to process with PID {pid}.")
     except psutil.NoSuchProcess:
         print(f"Process with PID {pid} not found.")
-        
+
 def get_recordings_list():
     recordings = []
     if not os.path.exists(recordings_dir):
@@ -383,7 +383,7 @@ def load_video_settings():
     except ValueError:
         print(f"ValueError")
         return DEFAULT_VIDEO_OPTIONS
-    
+
 def load_user_modifiable_video_settings(all_settings):
     return {key: value for key, value in all_settings.items() if key in user_modifiable_video_settings}
 
@@ -422,7 +422,7 @@ def get_state():
         "previewFile": img_path
     }
 
-def get_host_number(): 
+def get_host_number():
     hostname = os.uname()[1]
 
     match = re.search(r'(\d+)$', hostname)
