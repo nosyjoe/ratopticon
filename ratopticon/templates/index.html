@@ -40,6 +40,7 @@
 <div class="row justify-content-center">
     <div class="col-4">
         <h2>Recorded Videos:</h2>
+        <p id="recordings-error" style="color: #b00020;"></p>
         <ul id="recordings" class="list-group">
 
         </ul>
@@ -214,16 +215,20 @@
         fetch(url, { method: 'DELETE' })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error(url + " Network response was not ok: "+response.status+" "+response.statusText);
+                    return response.json().then(data => {
+                        throw new Error(data.error || (url + " Network response was not ok: "+response.status+" "+response.statusText));
+                    });
                 }
                 console.log(response);
             })
             .catch(error => {
                 console.error("There was a problem with your fetch operation:", error);
+                showRecordingsError(error.message || "Delete failed.");
             });
     }
 
     function updateState(state) {
+        clearRecordingsError();
         let indicator = document.getElementById('recording-indicator');
         if (state.isRecording) {
             indicator.style.display = '';
@@ -244,6 +249,19 @@
         });
     }
 
+    function showRecordingsError(message) {
+        const el = document.getElementById('recordings-error');
+        el.textContent = message;
+        setTimeout(clearRecordingsError, 4000);
+    }
+
+    function clearRecordingsError() {
+        const el = document.getElementById('recordings-error');
+        if (el.textContent) {
+            el.textContent = '';
+        }
+    }
+
     function confirmDeletion(filename) {
         if (confirm("Do you really want to delete the recording?")) {
             // User clicked "OK"
@@ -255,4 +273,3 @@
     }
 </script>
 {% endblock content %}
-

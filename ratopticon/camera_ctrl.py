@@ -240,22 +240,26 @@ def get_recordings():
 @bp.route('/recordings/<filename>', methods=['DELETE'])
 def delete_recordings(filename):
     try:
-        file_path = os.path.join(recordings_dir, filename)
+        file_path = resolve_recording_path(filename)
+        if file_path is None:
+            return jsonify({"error": "Invalid filename."}), 400
         os.remove(file_path)
         return "File "+file_path+" deleted successfully."
     except OSError as e:
-        return f"Error deleting the file: {e}"
+        return jsonify({"error": f"Error deleting the file: {e}"}), 500
     
 @bp.route('/download/<filename>', methods=['GET'])
 def download(filename):
     try:
-        file_path = os.path.join(recordings_dir, filename)
+        file_path = resolve_recording_path(filename)
+        if file_path is None:
+            return jsonify({"error": "Invalid filename."}), 400
         print("Downloading file: "+file_path)
         file_root, file_extension = os.path.splitext(filename)
         # return send_file(file_path, mimetype="video/x-"+file_extension.lstrip('.'), as_attachment=True)
         return send_file(file_path, as_attachment=True)
     except Exception as e:
-        return str(e)
+        return jsonify({"error": str(e)}), 500
     
 @bp.route('/preview_update', methods=['GET'])
 def preview_update():
@@ -324,6 +328,15 @@ def get_recordings_list():
             recordings.append(filename)
     recordings.sort(reverse = True)
     return recordings
+
+def resolve_recording_path(filename):
+    if os.path.sep in filename or (os.path.altsep and os.path.altsep in filename):
+        return None
+    base_dir = os.path.abspath(recordings_dir)
+    candidate_path = os.path.abspath(os.path.join(base_dir, filename))
+    if os.path.commonpath([base_dir, candidate_path]) != base_dir:
+        return None
+    return candidate_path
 
 def get_img_path(app, suffix=""):
     return os.path.join(current_app.root_path, 'static', 'img', f"preview{suffix}.jpg")
