@@ -438,7 +438,7 @@ def get_current_settings_and_info():
 def create_lock_file(lock_file_path):
     ensure_parent_dir(lock_file_path)
     with open(lock_file_path, 'w') as lock_file:
-        lock_file.write('lock')
+        lock_file.write(f"{os.getpid()} {int(time.time())}")
 
 def remove_lock_file(lock_file_path):
     if os.path.exists(lock_file_path):
@@ -448,7 +448,12 @@ def is_locked(lock_file_path):
     return os.path.exists(lock_file_path)
 
 def is_recording_locked():
-    return is_locked(lockfile_recording)
+    if not is_locked(lockfile_recording):
+        return False
+    if find_process_by_name(process_name) is None and recording_process is None:
+        remove_lock_file(lockfile_recording)
+        return False
+    return True
 
 def lock_recording():
     create_lock_file(lockfile_recording)
@@ -457,7 +462,12 @@ def unlock_recording():
     remove_lock_file(lockfile_recording)
 
 def is_preview_locked():
-    return is_locked(lockfile_preview)
+    if not is_locked(lockfile_preview):
+        return False
+    if is_stale_lock(lockfile_preview, max_age_seconds=5):
+        remove_lock_file(lockfile_preview)
+        return False
+    return True
 
 def lock_preview():
     create_lock_file(lockfile_preview)
@@ -483,3 +493,15 @@ def ensure_parent_dir(path):
     parent_dir = os.path.dirname(path)
     if parent_dir:
         os.makedirs(parent_dir, exist_ok=True)
+
+def is_stale_lock(lock_file_path, max_age_seconds):
+    try:
+        with open(lock_file_path, 'r') as lock_file:
+            parts = lock_file.read().strip().split()
+        if len(parts) != 2:
+            return True
+        _, timestamp = parts
+        age_seconds = time.time() - int(timestamp)
+        return age_seconds > max_age_seconds
+    except OSError:
+        return True
