@@ -29,7 +29,8 @@ python -m flask --app ratopticon run --port 8000 -h 0.0.0.0 --debug
 ## Set ip-address
 
 ```
-sudo nmcli con mod 'Wired connection 1' ipv4.addresses 192.168.0.254/24 ipv4.method manual
+sudo nmcli con mod 'Wired connection 1' ipv4.addresses 192.168.0.252/24 ipv4.method manual
+sudo nmcli con mod 'Wired connection 1' ipv4.addresses 192.168.0.252/24 ipv4.method manual ipv4.gateway 192.168.0.8
 sudo nmcli con up 'Wired connection 1'
 
 # gateway not needed atm

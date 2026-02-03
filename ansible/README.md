@@ -14,4 +14,12 @@ password is set, but not required
 sudo arp-scan --interface <your interface> --localnet --numeric --ignoredups
 ```
 
+## Install pipenv
+
+```
+pipenv install
+```
+## Edit hostfile 
+
+
 
