@@ -10,12 +10,12 @@ import re
 bp = Blueprint('camera_ctrl', __name__)
 
 # config
-recordings_dir = '/home/ratpi/recordings'
+recordings_dir = os.environ.get('RATOPTICON_RECORDINGS_DIR', '/home/ratpi/recordings')
 
-rpi_video_params_file = '/home/ratpi/rpicam_vid_params'
-rpi_image_params_file = '/home/ratpi/rpicam_image_params'
-lockfile_preview = '/home/ratpi/preview.lock'
-lockfile_recording = '/home/ratpi/recording.lock'
+rpi_video_params_file = os.environ.get('RATOPTICON_VIDEO_PARAMS_FILE', '/home/ratpi/rpicam_vid_params')
+rpi_image_params_file = os.environ.get('RATOPTICON_IMAGE_PARAMS_FILE', '/home/ratpi/rpicam_image_params')
+lockfile_preview = os.environ.get('RATOPTICON_PREVIEW_LOCK', '/home/ratpi/preview.lock')
+lockfile_recording = os.environ.get('RATOPTICON_RECORDING_LOCK', '/home/ratpi/recording.lock')
 # rpi_video_params_file = '/Users/philipp/rpicam_vid_params'
 # rpi_image_params_file = '/Users/philipp/rpicam_image_params'
 rpicam_jpeg = '/usr/bin/rpicam-jpeg'
@@ -283,7 +283,7 @@ def update_settings():
 
         return get_settings()
     except Exception as e:
-        return str(e)
+        return jsonify({"error": str(e)}), 500
     
 @bp.route('/settings', methods=['GET'])
 def get_settings():
@@ -298,7 +298,7 @@ def delete_settings():
         write_settings_to_files(DEFAULT_VIDEO_OPTIONS)
         return {'success': True}
     except Exception as e:
-        return str(e)
+        return jsonify({"error": str(e)}), 500
         
 def find_process_by_name(process_name):
     for process in psutil.process_iter(['pid', 'name']):
@@ -423,6 +423,7 @@ def get_current_settings_and_info():
     return {k: augment_setting_with_hint(k, v) for k, v in currentSettings.items()}
 
 def create_lock_file(lock_file_path):
+    ensure_parent_dir(lock_file_path)
     with open(lock_file_path, 'w') as lock_file:
         lock_file.write('lock')
 
@@ -456,9 +457,16 @@ def write_settings_to_files(settings):
     print("")
     print(f"defaults: {DEFAULT_VIDEO_OPTIONS}")
 
+    ensure_parent_dir(rpi_video_params_file)
     with open(rpi_video_params_file, 'w') as file:
             for key, value in settings.items():
                 file.write(f"{key}={value}\n")
+    ensure_parent_dir(rpi_image_params_file)
     with open(rpi_image_params_file, 'w') as file:
         for key, value in load_user_modifiable_image_settings(settings).items():
             file.write(f"{key}={value}\n")
+
+def ensure_parent_dir(path):
+    parent_dir = os.path.dirname(path)
+    if parent_dir:
+        os.makedirs(parent_dir, exist_ok=True)
