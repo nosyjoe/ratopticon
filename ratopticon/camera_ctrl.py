@@ -1,5 +1,5 @@
 import subprocess
-import psutils
+import psutil
 import signal
 import os
 from flask import render_template, jsonify, send_file, Blueprint, current_app, request
