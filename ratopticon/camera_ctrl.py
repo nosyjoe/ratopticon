@@ -22,6 +22,15 @@ rpicam_jpeg = '/usr/bin/rpicam-jpeg'
 rpicam_vid = '/usr/bin/rpicam-vid'
 process_name = "rpicam-vid"
 
+print(f"Config: recordings_dir={recordings_dir}")
+print(f"Config: rpi_video_params_file={rpi_video_params_file}")
+print(f"Config: rpi_image_params_file={rpi_image_params_file}")
+print(f"Config: lockfile_preview={lockfile_preview}")
+print(f"Config: lockfile_recording={lockfile_recording}")
+print(f"Config: rpicam_jpeg={rpicam_jpeg}")
+print(f"Config: rpicam_vid={rpicam_vid}")
+print(f"Config: process_name={process_name}")
+
 
 # video settings
 DEFAULT_VIDEO_OPTIONS = {
@@ -451,8 +460,11 @@ def is_recording_locked():
     if not is_locked(lockfile_recording):
         return False
     if find_process_by_name(process_name) is None and recording_process is None:
-        remove_lock_file(lockfile_recording)
-        return False
+        # Allow a short grace period after creating the lock while rpicam starts up.
+        if is_stale_lock(lockfile_recording, max_age_seconds=10):
+            remove_lock_file(lockfile_recording)
+            return False
+        return True
     return True
 
 def lock_recording():
