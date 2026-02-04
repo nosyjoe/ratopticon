@@ -13,7 +13,7 @@ source venv/bin/activate
 
 python3 -m pip install --upgrade pip
 
-python3 -m pip install flask gunicorn psutils
+python3 -m pip install flask gunicorn psutil
 ```
 
 Run with

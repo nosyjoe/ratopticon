@@ -21,5 +21,10 @@ pipenv install
 ```
 ## Edit hostfile 
 
+Edit `hosts.ini` with your Pi's IP/hostname, then deploy from this folder:
+
+```bash
+ansible-playbook -i hosts.ini playbook.yml
+```
 
 
